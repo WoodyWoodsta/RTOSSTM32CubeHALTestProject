@@ -34,37 +34,31 @@
   /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
-#include "stdlib.h"
+#include "string.h"
 
 /* Private variables ---------------------------------------------------------*/
 osThreadId sendTaskHandle;
 osThreadId receiveTaskHandle;
-/* Flexible message struct implementation for messages */
-//#define msg_st_t struct msg_st*
-//#define msg_st_t_Size (sizeof(uint32_t) + sizeof(char))
-//struct msg_st {
-//  uint32_t msgStringLength; // Length of the string in the message
-//  char msgString[]; // Message string
-//};
 
+/* Flexible message struct implementation for messages */
 typedef struct {
-  uint8_t integer;
-  uint8_t integer2;
-} T_MEAS;
-#define T_MEAS_SIZE sizeof(T_MEAS)
+  uint32_t stringLength; // Length of the string
+  char *string; // Pointer to string
+} MSG_STRING_T;
 
 // Define the memory pool and message queue
-osPoolDef(msgPool, 16, T_MEAS);
-osPoolId msgPool;
-osMessageQDef(msgQ, 8, T_MEAS);
-osMessageQId msgQ;
+osPoolDef(msgStringPool, 8, MSG_STRING_T);
+osPoolId msgStringPool;
+osMessageQDef(msgStringQ, 8, MSG_STRING_T);
+osMessageQId msgStringQ;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void sendTaskThread(void const * argument);
 void receiveTaskThread(void const * argument);
-struct msg_st* msgStAlloc(uint32_t msgStringLength);
+MSG_STRING_T* msgStringStructAlloc(osPoolId mPool, uint32_t msgStringLength, char *msgString);
+void msgStringStructFree(osPoolId mPool, MSG_STRING_T *msgStringStructPtr);
 
 int main(void) {
   /* MCU Configuration----------------------------------------------------------*/
@@ -79,8 +73,8 @@ int main(void) {
   MX_GPIO_Init();
 
   // Create the memory pool and message queue
-  msgPool = osPoolCreate(osPool(msgPool));
-  msgQ = osMessageCreate(osMessageQ(msgQ), NULL);
+  msgStringPool = osPoolCreate(osPool(msgStringPool));
+  msgStringQ = osMessageCreate(osMessageQ(msgStringQ), NULL);
 
   /* Create the thread(s) */
   /* definition and creation of sendTask */
@@ -164,64 +158,69 @@ void MX_GPIO_Init(void) {
 
 /* LED0TaskThread function */
 void sendTaskThread(void const * argument) {
-  uint32_t msgCount = 1; // Count the number of messages sent
+  MSG_STRING_T *msgSendPtr;
+  char msgString[] = "Test string";
 
   /* Infinite loop */
   for (;;) {
-    T_MEAS *msgPtr;
     // Allocate memory for the message struct
-    msgPtr = osPoolAlloc(msgPool);
-    msgPtr->integer = msgCount++;
-    if (msgCount >= 255) {
-      msgCount = 1;
-    }
+    msgSendPtr = msgStringStructAlloc(msgStringPool, sizeof(msgString), msgString);
+    osMessagePut(msgStringQ, (uint32_t) msgSendPtr, osWaitForever); // Send the message
 
-    msgPtr->integer2 = 5; // Random number
-    osMessagePut(msgQ, (uint32_t) msgPtr, osWaitForever); // Send the message
-
-    osDelay(100); // Wait for half a second
+    osDelay(1000); // Wait for half a second
   }
 }
 
 /* LED1TaskThread function */
 void receiveTaskThread(void const * argument) {
-  T_MEAS *receivePtr;
+  MSG_STRING_T *msgReceivePtr;
   osEvent incomingEvent;
+  char msgStringTest[] = "Test string";
 
   /* Infinite loop */
   for (;;) {
-    incomingEvent = osMessageGet(msgQ, osWaitForever); // Wait for the message
+    incomingEvent = osMessageGet(msgStringQ, osWaitForever); // Wait for the message
+
     // If there is a message waiting in the cue
     if (incomingEvent.status == osEventMessage) {
-      receivePtr = incomingEvent.value.p; // Grab the sent pointer
+      msgReceivePtr = incomingEvent.value.p; // Grab the sent pointer
       // If the random number is correct, display the message number
-      if (receivePtr->integer2 == 5) {
-        GPIOB->ODR = receivePtr->integer;
+      if (strcmp(msgReceivePtr->string, msgStringTest) == 0) {
+        GPIOB->ODR = 0b10101010;
+      } else {
+        GPIOB->ODR = 0b00011000;
       }
-      osPoolFree(msgPool, receivePtr); // Free the previously allocated memory
+
+      size_t heapMem = xPortGetFreeHeapSize();
+      msgStringStructFree(msgStringPool, msgReceivePtr); // Free the string and the pool block
+
+      osDelay(300);
+      GPIOB->ODR = 0b00000000;
     }
   }
   /* USER CODE END LED1TaskThread */
 }
 
-//struct msg_st* msgStructAlloc(uint32_t msgStringLength) {
-//  // Allocate the flexible array method
-//  struct msg_st* vec = malloc(sizeof(struct msg_st) + (msgStringLength * sizeof(uint32_t)));
-//
-//  // Handle any errors
-//  if (!vec) {
-//    __asm("nop"); // TODO Handle some errors
-//  } else
-//    // Set the length of the string in the new struct
-//    vec->msgStringLength = msgStringLength;
-//
-//  // Zero-fill string array
-//  for (uint32_t ix = 0; ix < msgStringLength; ix++)
-//    vec->msgString[ix] = 0;
-//
-//  return vec;
-//}
+MSG_STRING_T* msgStringStructAlloc(osPoolId mPool, uint32_t msgStringLength, char *msgString) {
+  MSG_STRING_T* msgStringStructPtr; // Create the struct pointer needed for the message
 
+  msgStringStructPtr = osPoolAlloc(mPool);
+  
+  msgStringStructPtr->stringLength = msgStringLength; // Assign the length of the allocated memory space
+  msgStringStructPtr->string = pvPortMalloc(msgStringLength); // Actually allocate the memory space
+
+  strncpy(msgStringStructPtr->string, msgString, msgStringLength); // Copy into the new space, the string contents
+
+  return msgStringStructPtr;
+}
+
+void msgStringStructFree(osPoolId mPool, MSG_STRING_T *msgStringStructPtr) {
+  vPortFree(msgStringStructPtr->string); // Free the memory
+
+  osPoolFree(mPool, msgStringStructPtr); // Free the message from the memory pool
+
+  // TODO Add some sort of safety here, gee...
+}
 
 #ifdef USE_FULL_ASSERT
 
