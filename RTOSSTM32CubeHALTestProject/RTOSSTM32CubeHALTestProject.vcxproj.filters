@@ -155,6 +155,9 @@
     <Filter Include="Source files\Src">
       <UniqueIdentifier>{3b208766-1044-4269-919a-00dffdfb3866}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source files\Device-specific files">
+      <UniqueIdentifier>{caf2a745-7051-464d-8f63-ccb22e062752}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile" />
@@ -164,7 +167,9 @@
     <None Include="release.mak">
       <Filter>Make files</Filter>
     </None>
-    <None Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Source\Templates\startup_stm32f051x8.s" />
+    <None Include="stm32.mak">
+      <Filter>Source files\Device-specific files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f030x6.h">
@@ -426,6 +431,9 @@
     </ClCompile>
     <ClCompile Include="Src\stm32f0xx_it.c">
       <Filter>Source files\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Source\Templates\startup_stm32f0xx.c">
+      <Filter>Source files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

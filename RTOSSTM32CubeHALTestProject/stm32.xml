@@ -8,7 +8,7 @@
     <Entries>
       <KeyValue>
         <Key>com.sysprogs.toolchainoptions.arm.libctype</Key>
-        <Value />
+        <Value>--specs=nano.specs</Value>
       </KeyValue>
       <KeyValue>
         <Key>com.sysprogs.toolchainoptions.arm.compactcpp</Key>
@@ -16,7 +16,7 @@
       </KeyValue>
       <KeyValue>
         <Key>com.sysprogs.toolchainoptions.arm.libnosys</Key>
-        <Value />
+        <Value>--specs=nosys.specs</Value>
       </KeyValue>
     </Entries>
   </MCUProperties>

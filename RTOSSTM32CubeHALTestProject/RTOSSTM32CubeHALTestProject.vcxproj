@@ -64,9 +64,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="debug.mak" />
-    <None Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Source\Templates\startup_stm32f051x8.s" />
     <None Include="Makefile" />
     <None Include="release.mak" />
+    <None Include="stm32.mak" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Inc\FreeRTOSConfig.h" />
@@ -133,6 +133,7 @@
     <ClInclude Include="Lib\Middlewares\Third_Party\FreeRTOS\Source\portable\GCC\ARM_CM0\portmacro.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Source\Templates\startup_stm32f0xx.c" />
     <ClCompile Include="Lib\Drivers\CMSIS\Device\ST\STM32F0xx\Source\Templates\system_stm32f0xx.c" />
     <ClCompile Include="Lib\Drivers\STM32F0xx_HAL_Driver\Src\stm32f0xx_hal.c" />
     <ClCompile Include="Lib\Drivers\STM32F0xx_HAL_Driver\Src\stm32f0xx_hal_cortex.c" />

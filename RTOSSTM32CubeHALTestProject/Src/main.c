@@ -35,6 +35,31 @@
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
 #include "string.h"
+#include <errno.h>
+#include "sys/types.h"
+
+  /**"Smart" implementation of the _sbrk() 
+    *function for use with the newlib-nano library */
+extern caddr_t _sbrk(int incr) {
+  register char * stack_ptr asm("sp");
+  extern char end asm("end");
+  static char * heap_end;
+  char * prev_heap_end;
+
+  if (heap_end == NULL)
+    heap_end = &end;
+
+  prev_heap_end = heap_end;
+
+  if (heap_end + incr > stack_ptr) {
+    errno = ENOMEM;
+    return (caddr_t) -1;
+  }
+
+  heap_end += incr;
+
+  return (caddr_t) prev_heap_end;
+}
 
 /* Private variables ---------------------------------------------------------*/
 osThreadId sendTaskHandle;
@@ -47,7 +72,7 @@ typedef struct {
 } MSG_STRING_T;
 
 // Define the memory pool and message queue
-osPoolDef(msgStringPool, 8, MSG_STRING_T);
+osPoolDef(msgStringPool, 9, MSG_STRING_T);
 osPoolId msgStringPool;
 osMessageQDef(msgStringQ, 8, MSG_STRING_T);
 osMessageQId msgStringQ;
@@ -89,14 +114,12 @@ int main(void) {
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
-
   /* Infinite loop */
   while (1) {
     __asm("nop");
   }
 
 }
-
 
 /** System Clock Configuration
 */
@@ -167,7 +190,7 @@ void sendTaskThread(void const * argument) {
     msgSendPtr = msgStringStructAlloc(msgStringPool, sizeof(msgString), msgString);
     osMessagePut(msgStringQ, (uint32_t) msgSendPtr, osWaitForever); // Send the message
 
-    osDelay(1000); // Wait for half a second
+    osDelay(500); // Wait for half a second
   }
 }
 
